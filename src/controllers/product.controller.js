@@ -1,4 +1,7 @@
 import prisma from "../config/prisma.js";
+import cloudinary from "../config/cloudinary.js";
+import { promisify } from 'util';
+import fs from 'fs';
 
 // Listar todos os produtos
 export const getProducts = async (req, res) => {
@@ -31,11 +34,27 @@ export const getProduct = async (req, res) => {
 };
 
 // Criar produto
+// Use util.promisify para converter fs.unlink em uma função que retorna uma Promise
+const unlinkAsync = promisify(fs.unlink);
+
 export const createProduct = async (req, res) => {
   try {
     const { name, description, price, categoryId, available, tags, sortOrder } = req.body;
+    let imageUrl = null;
 
-    const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
+    if (req.file) {
+      // O Multer já fez o upload para uma pasta temporária.
+      // Agora, fazemos o upload do arquivo temporário para o Cloudinary.
+      const uploadResult = await cloudinary.uploader.upload(req.file.path);
+      
+      // A URL da imagem no Cloudinary é o resultado que precisamos.
+      imageUrl = uploadResult.secure_url;
+
+      // Opcional: Remova o arquivo temporário do servidor local após o upload para o Cloudinary.
+      // Isso ajuda a manter seu servidor limpo.
+      await unlinkAsync(req.file.path);
+    }
+
     const availableBool = available !== undefined ? available === "true" : true;
 
     const product = await prisma.product.create({
@@ -53,6 +72,11 @@ export const createProduct = async (req, res) => {
 
     res.status(201).json(product);
   } catch (error) {
+    // Se ocorrer um erro, você pode verificar se o arquivo temporário existe
+    // e removê-lo para evitar que ele permaneça no servidor.
+    if (req.file) {
+      await unlinkAsync(req.file.path).catch(err => console.error("Erro ao remover o arquivo temporário:", err));
+    }
     res.status(500).json({ error: error.message });
   }
 };
@@ -62,25 +86,62 @@ export const updateProduct = async (req, res) => {
   try {
     const { id } = req.params;
     const { name, description, price, categoryId, available, tags, sortOrder } = req.body;
+    let imageUrl = undefined;
+    let oldProduct = null;
 
-    const imageUrl = req.file ? `/uploads/${req.file.filename}` : undefined;
+    if (req.file) {
+      // Se um novo arquivo de imagem foi enviado, faça o upload para o Cloudinary.
+      const uploadResult = await cloudinary.uploader.upload(req.file.path);
+      imageUrl = uploadResult.secure_url;
 
+      // Opcional: Remova o arquivo temporário do servidor local após o upload.
+      await unlinkAsync(req.file.path);
+
+      // Busque o produto existente para obter a URL da imagem antiga
+      // para poder removê-la do Cloudinary, se necessário.
+      oldProduct = await prisma.product.findUnique({ where: { id: parseInt(id) } });
+
+    }
+
+    // Converta o valor 'available' para boolean, se ele for fornecido.
+    const availableBool = available !== undefined ? available === "true" : undefined;
+    
+    // O objeto 'data' só deve conter campos que realmente foram passados no body.
+    const updateData = {
+      ...(name && { name }),
+      ...(description && { description }),
+      ...(price !== undefined && { price: parseFloat(price) }),
+      ...(imageUrl !== undefined && { imageUrl }),
+      ...(available !== undefined && { available: availableBool }),
+      ...(tags && { tags: JSON.parse(tags) }),
+      ...(sortOrder !== undefined && { sortOrder: parseInt(sortOrder) }),
+      ...(categoryId !== undefined && { categoryId: parseInt(categoryId) })
+    };
+    
+    // Se não houver dados para atualizar, retorne uma resposta.
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({ message: "Nenhum dado válido para atualizar foi fornecido." });
+    }
+    
     const product = await prisma.product.update({
       where: { id: parseInt(id) },
-      data: {
-        name,
-        description,
-        price: price !== undefined ? parseFloat(price) : undefined,
-        imageUrl,
-        available: available !== undefined ? available : undefined,
-        tags: tags ? JSON.parse(tags) : undefined,
-        sortOrder: sortOrder !== undefined ? parseInt(sortOrder) : undefined,
-        categoryId: categoryId !== undefined ? parseInt(categoryId) : undefined
-      }
+      data: updateData
     });
+    
+    // Se um novo upload ocorreu e o produto antigo tinha uma imagem, 
+    // você pode considerar remover a imagem antiga do Cloudinary para economizar espaço.
+    if (oldProduct?.imageUrl && req.file) {
+      // Extrair o public_id da URL do Cloudinary para deletar o arquivo.
+      const publicId = oldProduct.imageUrl.split('/').pop().split('.')[0];
+      await cloudinary.uploader.destroy(publicId);
+    }
 
     res.json(product);
   } catch (error) {
+    // Se ocorrer um erro, verifique se o arquivo temporário existe e remova-o.
+    if (req.file) {
+      await unlinkAsync(req.file.path).catch(err => console.error("Erro ao remover o arquivo temporário:", err));
+    }
     res.status(500).json({ error: error.message });
   }
 };
