@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -20,6 +14,26 @@ model User {
   createdAt DateTime @default(now())
 }
 
+model Company {
+  id        Int      @id @default(autoincrement())
+  name      String
+  phone     String
+  cnpj      String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Client {
+  id        Int      @id @default(autoincrement())
+  name      String
+  phone     String
+  address   String?  // opcional: endereço do cliente
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model Category {
   id        Int       @id @default(autoincrement())
   name      String
@@ -31,19 +45,89 @@ model Category {
 }
 
 model Product {
-  id          Int      @id @default(autoincrement())
+  id          Int               @id @default(autoincrement())
   name        String
   description String?
   price       Float
   imageUrl    String?
-  available   Boolean  @default(true)
-  tags        String[] // ex.: ["vegano", "promoção"], só se precisar
-  sortOrder   Int?     // opcional: ordem dentro da categoria
+  available   Boolean           @default(true)
+  tags        String[]          // ex.: ["vegano", "promoção"], só se precisar
+  sortOrder   Int?              // opcional: ordem dentro da categoria
 
   categoryId  Int
-  category    Category @relation(fields: [categoryId], references: [id])
+  category    Category          @relation(fields: [categoryId], references: [id])
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  options     ProductOption[]   // personalizações
+
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
 }
 
+model ProductOption {
+  id          Int                 @id @default(autoincrement())
+  name        String             // ex: "Escolha o recheio"
+  type        String             // ex: "single", "multiple"
+  productId   Int
+  product     Product            @relation(fields: [productId], references: [id])
+  items       ProductOptionItem[]
+
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+}
+
+model ProductOptionItem {
+  id         Int      @id @default(autoincrement())
+  name       String   // ex: "Chocolate", "Morango"
+  price      Float    @default(0.0)
+  optionId   Int
+  option     ProductOption @relation(fields: [optionId], references: [id])
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Order {
+  id           Int           @id @default(autoincrement())
+  status       String        @default("pending") // ex: pending, confirmed, cancelled
+  total        Float
+  tableNumber  Int?          // opcional: número da mesa
+  orderType    String?       // ex: "mesa", "balcao", "delivery"
+
+  clientId     Int?          
+  client       Client?       @relation(fields: [clientId], references: [id])
+
+  items        OrderItem[]
+  payment      Payment?
+
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model OrderItem {
+  id         Int      @id @default(autoincrement())
+  quantity   Int
+  unitPrice  Float
+
+  orderId    Int
+  order      Order    @relation(fields: [orderId], references: [id])
+
+  productId  Int
+  product    Product  @relation(fields: [productId], references: [id])
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Payment {
+  id         Int      @id @default(autoincrement())
+  method     String   // ex: "pix", "dinheiro", "cartao"
+  amount     Float
+  status     String   // ex: "pago", "pendente", "cancelado"
+  paidAt     DateTime?
+
+  orderId    Int      @unique
+  order      Order    @relation(fields: [orderId], references: [id])
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
