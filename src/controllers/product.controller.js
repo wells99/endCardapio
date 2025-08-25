@@ -39,22 +39,24 @@ const unlinkAsync = promisify(fs.unlink);
 
 export const createProduct = async (req, res) => {
   try {
+    console.log("Guardando o PRODUTO")
     const { name, description, price, categoryId, available, tags, sortOrder } = req.body;
-    let imageUrl = null;
+    let imageUrl = "Esse campo deve ser enviado com o nome:image";
 
     if (req.file) {
       // O Multer já fez o upload para uma pasta temporária.
       // Agora, fazemos o upload do arquivo temporário para o Cloudinary.
       const uploadResult = await cloudinary.uploader.upload(req.file.path);
-      
+
       // A URL da imagem no Cloudinary é o resultado que precisamos.
       imageUrl = uploadResult.secure_url;
 
       // Opcional: Remova o arquivo temporário do servidor local após o upload para o Cloudinary.
       // Isso ajuda a manter seu servidor limpo.
       await unlinkAsync(req.file.path);
-    }
 
+    }
+  
     const availableBool = available !== undefined ? available === "true" : true;
 
     const product = await prisma.product.create({
@@ -68,8 +70,9 @@ export const createProduct = async (req, res) => {
         sortOrder: sortOrder ? parseInt(sortOrder) : null,
         categoryId: parseInt(categoryId)
       }
-    });
 
+    });
+    console.log("PRODUTO foi Guardado com Sucesso!!")
     res.status(201).json(product);
   } catch (error) {
     // Se ocorrer um erro, você pode verificar se o arquivo temporário existe
@@ -105,7 +108,7 @@ export const updateProduct = async (req, res) => {
 
     // Converta o valor 'available' para boolean, se ele for fornecido.
     const availableBool = available !== undefined ? available === "true" : undefined;
-    
+
     // O objeto 'data' só deve conter campos que realmente foram passados no body.
     const updateData = {
       ...(name && { name }),
@@ -117,17 +120,17 @@ export const updateProduct = async (req, res) => {
       ...(sortOrder !== undefined && { sortOrder: parseInt(sortOrder) }),
       ...(categoryId !== undefined && { categoryId: parseInt(categoryId) })
     };
-    
+
     // Se não houver dados para atualizar, retorne uma resposta.
     if (Object.keys(updateData).length === 0) {
       return res.status(400).json({ message: "Nenhum dado válido para atualizar foi fornecido." });
     }
-    
+
     const product = await prisma.product.update({
       where: { id: parseInt(id) },
       data: updateData
     });
-    
+
     // Se um novo upload ocorreu e o produto antigo tinha uma imagem, 
     // você pode considerar remover a imagem antiga do Cloudinary para economizar espaço.
     if (oldProduct?.imageUrl && req.file) {

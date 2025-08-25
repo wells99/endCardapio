@@ -18,10 +18,10 @@ router.get("/", getProducts);
 // Listar um produto específico
 router.get("/:id", getProduct);
 
-// Criar produto (com upload de imagem, protegido e com tratamento contra arquivos indesejados no lugar das imagens)
+// ENVIAR IMAGEM COM CAMPO: image --> Criar produto (com upload de imagem, protegido e com tratamento contra arquivos indesejados no lugar das imagens)
 router.post("/", authMiddleware, multerErrorHandler, createProduct);
 
-// Atualizar produto (com upload de imagem opcional, protegido e com tratamento contra arquivos indesejados no lugar das imagens)
+// ENVIAR IMAGEM COM CAMPO: image --> Atualizar produto (com upload de imagem opcional, protegido e com tratamento contra arquivos indesejados no lugar das imagens)
 router.put("/:id", authMiddleware, multerErrorHandler, updateProduct);
 
 // Deletar produto (protegido)
