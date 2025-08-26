@@ -3,7 +3,7 @@ import { authMiddleware } from "../middlewares/authMiddleware.js";
 import {
   createProductOption,
   getProductOptions,
-  getProductOptionById,
+  getProductOption,
   updateProductOption,
   deleteProductOption,
 } from "../controllers/productOption.controller.js";
@@ -18,7 +18,7 @@ router.post("/", authMiddleware, createProductOption);
 router.get("/", getProductOptions);
 
 // Rota para obter uma opção de produto específica por ID
-router.get("/:id", getProductOptionById);
+router.get("/:id", getProductOption);
 
 // Rota para atualizar uma opção de produto
 router.put("/:id", authMiddleware, updateProductOption);

@@ -15,10 +15,10 @@ const router = Router();
 router.post("/", authMiddleware, createProductOptionItem);
 
 // Rota para listar todos os itens de opção de produto
-router.get("/", getProductOptionItems);
+router.get("/",authMiddleware, getProductOptionItems);
 
 // Rota para obter um item de opção de produto específico por ID
-router.get("/:id", getProductOptionItem);
+router.get("/:id",authMiddleware, getProductOptionItem);
 
 // Rota para atualizar um item de opção de produto
 router.put("/:id", authMiddleware, updateProductOptionItem);
