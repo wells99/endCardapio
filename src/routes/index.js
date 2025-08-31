@@ -6,6 +6,7 @@ import clientRoutes from "./client.routes.js";
 import companytRoutes from "./company.routes.js";
 
 import productOption from "./productOption.routes.js";
+import productOptionItems from "./productOptionItems.routes.js";
 import orders from "./orders.routes.js";
 
 import orderItems from "./orderItems.routes.js";
@@ -26,6 +27,7 @@ router.use("/clients", clientRoutes);
 router.use("/company",companytRoutes);
 
 router.use("/productOption",productOption);
+router.use("/productOptionItems",productOptionItems);
 router.use("/orders",orders);
 
 router.use("/orderitems",orderItems);

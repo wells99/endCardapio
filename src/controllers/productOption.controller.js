@@ -1,3 +1,4 @@
+import prisma from "../config/prisma.js";
 // Listar todas as opções de produto
 export const getProductOptions = async (req, res) => {
   try {

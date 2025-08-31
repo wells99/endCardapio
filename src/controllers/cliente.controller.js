@@ -55,28 +55,26 @@ export const createClient = async (req, res) => {
 
 // Atualizar Cliente
 export const updateClient = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { name, phone, address } = req.body;
+  try {
+    const { id } = req.params;
+    const { name: nome, phone: telefone, address: endereco } = req.body;
 
-    const updatedClient = await prisma.client.update({
-      where: { id: parseInt(id) },
-      data: {
-        // Isso permite atualizar apenas os campos que foram enviados na requisição
-        ...(name && { name }),
-        ...(phone && { phone }),
-        ...(address && { address }),
-      },
-    });
+    const updatedClient = await prisma.client.update({
+      where: { id: parseInt(id) },
+      data: {
+        // Agora usamos os novos nomes das variáveis
+        ...(nome && { name: nome }),
+        ...(telefone && { phone: telefone }),
+        ...(endereco && { address: endereco }),
+      },
+    });
+    
+    // ... restante do seu código para enviar a resposta
+    return res.status(200).json(updatedClient);
 
-    res.json(updatedClient);
-  } catch (error) {
-    // Adiciona uma verificação para o caso de o cliente não ser encontrado
-    if (error.code === 'P2025') {
-        return res.status(404).json({ error: "Cliente não encontrado." });
-    }
-    res.status(500).json({ error: error.message });
-  }
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
 };
 
 // Deletar Cliente

@@ -1,9 +1,11 @@
+// schema-v2.prisma
+
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
@@ -28,16 +30,19 @@ model Client {
   id        Int      @id @default(autoincrement())
   name      String
   phone     String
-  address   String?  // opcional: endereço do cliente
+  address   String?
+
+  // Adicionando o campo de volta para a relação com Order
+  orders    Order[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
 model Category {
-  id        Int       @id @default(autoincrement())
+  id        Int      @id @default(autoincrement())
   name      String
-  sortOrder Int?      // opcional: definir a ordem de exibição no cardápio
+  sortOrder Int?
   products  Product[]
 
   createdAt DateTime @default(now())
@@ -45,89 +50,95 @@ model Category {
 }
 
 model Product {
-  id          Int               @id @default(autoincrement())
+  id          Int            @id @default(autoincrement())
   name        String
   description String?
   price       Float
   imageUrl    String?
-  available   Boolean           @default(true)
-  tags        String[]          // ex.: ["vegano", "promoção"], só se precisar
-  sortOrder   Int?              // opcional: ordem dentro da categoria
+  available   Boolean        @default(true)
+  // Corrigindo o tipo de dado para MySQL, que não suporta arrays
+  tags        String?
+
+  sortOrder   Int?
 
   categoryId  Int
-  category    Category          @relation(fields: [categoryId], references: [id])
+  category    Category       @relation(fields: [categoryId], references: [id])
 
-  options     ProductOption[]   // personalizações
+  options     ProductOption[]
+  // Adicionando o campo de volta para a relação com OrderItem
+  orderItems  OrderItem[]
+
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+}
+
+model ProductOption {
+  id          Int               @id @default(autoincrement())
+  name        String
+  type        String
+  productId   Int
+  product     Product           @relation(fields: [productId], references: [id])
+  items       ProductOptionItem[]
 
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
 }
 
-model ProductOption {
-  id          Int                 @id @default(autoincrement())
-  name        String             // ex: "Escolha o recheio"
-  type        String             // ex: "single", "multiple"
-  productId   Int
-  product     Product            @relation(fields: [productId], references: [id])
-  items       ProductOptionItem[]
-
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
-}
-
 model ProductOptionItem {
-  id         Int      @id @default(autoincrement())
-  name       String   // ex: "Chocolate", "Morango"
-  price      Float    @default(0.0)
-  optionId   Int
-  option     ProductOption @relation(fields: [optionId], references: [id])
+  id        Int          @id @default(autoincrement())
+  name      String
+  price     Float        @default(0.0)
+  optionId  Int
+  option    ProductOption @relation(fields: [optionId], references: [id])
 
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
 }
 
 model Order {
-  id           Int           @id @default(autoincrement())
-  status       String        @default("pending") // ex: pending, confirmed, cancelled
-  total        Float
-  tableNumber  Int?          // opcional: número da mesa
-  orderType    String?       // ex: "mesa", "balcao", "delivery"
+  id          Int       @id @default(autoincrement())
+  status      String    @default("pending")
+  total       Float
+  tableNumber Int?
+  orderType   String?
 
-  clientId     Int?          
-  client       Client?       @relation(fields: [clientId], references: [id])
+  clientId    Int?
+  // Removendo o `?` do campo de relação
+  client      Client?   @relation(fields: [clientId], references: [id])
 
-  items        OrderItem[]
-  payment      Payment?
+  items       OrderItem[]
+  payment     Payment?
 
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }
 
 model OrderItem {
-  id         Int      @id @default(autoincrement())
-  quantity   Int
-  unitPrice  Float
+  id          Int      @id @default(autoincrement())
+  quantity    Int
+  unitPrice   Float
 
-  orderId    Int
-  order      Order    @relation(fields: [orderId], references: [id])
+  orderId     Int
+  order       Order    @relation(fields: [orderId], references: [id])
 
-  productId  Int
-  product    Product  @relation(fields: [productId], references: [id])
+  productId   Int
+  // Removendo o `?` do campo de relação
+  product     Product  @relation(fields: [productId], references: [id])
 
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model Payment {
-  id         Int      @id @default(autoincrement())
-  method     String   // ex: "pix", "dinheiro", "cartao"
-  amount     Float
-  status     String   // ex: "pago", "pendente", "cancelado"
-  paidAt     DateTime?
+  id        Int      @id @default(autoincrement())
+  method    String
+  amount    Float
+  status    String
+  paidAt    DateTime?
 
-  orderId    Int      @unique
-  order      Order    @relation(fields: [orderId], references: [id])
+  orderId   Int      @unique
+  order     Order    @relation(fields: [orderId], references: [id])
 
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
