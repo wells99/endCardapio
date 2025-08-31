@@ -51,7 +51,7 @@ export const createProduct = async (req, res) => {
       // A URL da imagem no Cloudinary é o resultado que precisamos.
       imageUrl = uploadResult.secure_url;
 
-      // Opcional: Remova o arquivo temporário do servidor local após o upload para o Cloudinary.
+      // Removendo o arquivo temporário do servidor local após o upload para o Cloudinary.
       // Isso ajuda a manter seu servidor limpo.
       await unlinkAsync(req.file.path);
 
@@ -66,7 +66,7 @@ export const createProduct = async (req, res) => {
         price: parseFloat(price),
         imageUrl,
         available: availableBool,
-        tags: tags ? JSON.parse(tags) : [],
+        tags: tags ? JSON.parse(tags) : null,
         sortOrder: sortOrder ? parseInt(sortOrder) : null,
         categoryId: parseInt(categoryId)
       }
