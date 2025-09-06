@@ -84,28 +84,47 @@ export const createOrder = async (req, res) => {
 
 // Atualizar um pedido
 export const updateOrder = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { status, total, tableNumber, orderType, clientId } = req.body;
+    try {
+        const { id } = req.params;
+        const { status, total, tableNumber, orderType, clientId, items } = req.body;
 
-    const updatedOrder = await prisma.order.update({
-      where: { id: parseInt(id) },
-      data: {
-        ...(status && { status }),
-        ...(total !== undefined && { total }),
-        ...(tableNumber !== undefined && { tableNumber }),
-        ...(orderType && { orderType }),
-        ...(clientId !== undefined && { clientId }),
-      },
-    });
+        const updatedOrder = await prisma.order.update({
+            where: { id: parseInt(id) },
+            data: {
+                ...(status && { status }),
+                ...(total !== undefined && { total }),
+                ...(tableNumber !== undefined && { tableNumber }),
+                ...(orderType && { orderType }),
+                ...(clientId !== undefined && { clientId }),
+                // Adiciona o bloco de manipulação de itens
+                items: {
+                    // O método `set` vai deletar todos os itens antigos
+                    // e criar os novos com base no array `items`
+                    set: items.map(item => ({
+                        productId: item.productId,
+                        quantity: item.quantity,
+                        unitPrice: item.unitPrice,
+                    })),
+                },
+            },
+            // Inclui a relação `items` na resposta para que o frontend
+            // receba a lista de itens atualizada
+            include: {
+                items: {
+                    include: {
+                        product: true // Opcional: para retornar o nome do produto
+                    }
+                }
+            }
+        });
 
-    res.json(updatedOrder);
-  } catch (error) {
-    if (error.code === 'P2025') {
-      return res.status(404).json({ error: "Pedido não encontrado." });
+        res.json(updatedOrder);
+    } catch (error) {
+        if (error.code === 'P2025') {
+            return res.status(404).json({ error: "Pedido não encontrado." });
+        }
+        res.status(500).json({ error: error.message });
     }
-    res.status(500).json({ error: error.message });
-  }
 };
 
 // Deletar um pedido
