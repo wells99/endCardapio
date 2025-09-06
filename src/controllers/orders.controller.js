@@ -64,7 +64,7 @@ export const createOrder = async (req, res) => {
             data: items.map(item => ({
               productId: item.productId,
               quantity: item.quantity,
-              unitPrice: item.price,
+              unitPrice: item.unitPrice,
             })),
           },
         },
