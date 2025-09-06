@@ -88,6 +88,26 @@ export const updateOrder = async (req, res) => {
         const { id } = req.params;
         const { status, total, tableNumber, orderType, clientId, items } = req.body;
 
+        // 1. Excluir todos os itens de pedido existentes para este pedido.
+        await prisma.orderItem.deleteMany({
+            where: {
+                orderId: parseInt(id)
+            }
+        });
+
+        // 2. Criar os novos itens de pedido.
+        const createdItems = items.map(item => ({
+            productId: item.productId,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            orderId: parseInt(id) // Linka o novo item ao ID do pedido
+        }));
+
+        await prisma.orderItem.createMany({
+            data: createdItems
+        });
+        
+        // 3. Atualizar o pedido com os dados principais.
         const updatedOrder = await prisma.order.update({
             where: { id: parseInt(id) },
             data: {
@@ -96,29 +116,18 @@ export const updateOrder = async (req, res) => {
                 ...(tableNumber !== undefined && { tableNumber }),
                 ...(orderType && { orderType }),
                 ...(clientId !== undefined && { clientId }),
-                // Adiciona o bloco de manipulação de itens
-                items: {
-                    // O método `set` vai deletar todos os itens antigos
-                    // e criar os novos com base no array `items`
-                    set: items.map(item => ({
-                        productId: item.productId,
-                        quantity: item.quantity,
-                        unitPrice: item.unitPrice,
-                    })),
-                },
             },
-            // Inclui a relação `items` na resposta para que o frontend
-            // receba a lista de itens atualizada
             include: {
                 items: {
                     include: {
-                        product: true // Opcional: para retornar o nome do produto
+                        product: true
                     }
                 }
             }
         });
 
         res.json(updatedOrder);
+
     } catch (error) {
         if (error.code === 'P2025') {
             return res.status(404).json({ error: "Pedido não encontrado." });
