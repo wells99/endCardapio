@@ -56,8 +56,9 @@ model Product {
   price       Float
   imageUrl    String?
   available   Boolean        @default(true)
-  // Corrigindo o tipo de dado para MySQL, que não suporta arrays
-  tags        String?
+
+  // 👇 Soft delete
+  deleted     Boolean        @default(false)
 
   sortOrder   Int?
 
@@ -65,12 +66,12 @@ model Product {
   category    Category       @relation(fields: [categoryId], references: [id])
 
   options     ProductOption[]
-  // Adicionando o campo de volta para a relação com OrderItem
   orderItems  OrderItem[]
 
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
 }
+
 
 model ProductOption {
   id          Int               @id @default(autoincrement())
@@ -116,14 +117,15 @@ model Order {
 model OrderItem {
   id          Int      @id @default(autoincrement())
   quantity    Int
-  unitPrice   Float
+  unitPrice   Float     // já guarda o preço na hora da compra
+
+  // 👇 Snapshot de dados do produto no momento do pedido
+  productName String
+  productId   Int?
+  product     Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
 
   orderId     Int
   order       Order    @relation(fields: [orderId], references: [id])
-
-  productId   Int
-  // Removendo o `?` do campo de relação
-  product     Product  @relation(fields: [productId], references: [id])
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
