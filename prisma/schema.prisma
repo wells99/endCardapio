@@ -104,7 +104,7 @@ model Order {
   orderType   String?
 
   clientId    Int?
-  // Removendo o `?` do campo de relação
+  
   client      Client?   @relation(fields: [clientId], references: [id])
 
   items       OrderItem[]

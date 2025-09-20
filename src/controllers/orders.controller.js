@@ -63,6 +63,7 @@ export const createOrder = async (req, res) => {
           createMany: {
             data: items.map(item => ({
               productId: item.productId,
+              productName: item.productName,
               quantity: item.quantity,
               unitPrice: item.unitPrice,
             })),
@@ -98,6 +99,7 @@ export const updateOrder = async (req, res) => {
         // 2. Criar os novos itens de pedido.
         const createdItems = items.map(item => ({
             productId: item.productId,
+            productName: item.productName,
             quantity: item.quantity,
             unitPrice: item.unitPrice,
             orderId: parseInt(id) // Linka o novo item ao ID do pedido
