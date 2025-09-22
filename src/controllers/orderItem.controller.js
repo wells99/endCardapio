@@ -1,13 +1,12 @@
 import prisma from "../config/prisma.js";
 
-// Listar todos os itens de pedidos (ignorando os deletados)
+// Listar todos os itens de pedidos
 export const getOrderItems = async (req, res) => {
   try {
     const orderItems = await prisma.orderItem.findMany({
-      where: { deletedAt: null }, // só ativos
       include: {
         order: true,
-        product: true
+        product: true,
       },
     });
     res.json(orderItems);
@@ -20,11 +19,11 @@ export const getOrderItems = async (req, res) => {
 export const getOrderItem = async (req, res) => {
   try {
     const { id } = req.params;
-    const orderItem = await prisma.orderItem.findFirst({
-      where: { id: parseInt(id), deletedAt: null }, // só ativo
+    const orderItem = await prisma.orderItem.findUnique({
+      where: { id: parseInt(id) },
       include: {
         order: true,
-        product: true
+        product: true,
       },
     });
 
@@ -41,14 +40,35 @@ export const getOrderItem = async (req, res) => {
 // Criar um novo item de pedido
 export const createOrderItem = async (req, res) => {
   try {
-    const { quantity, unitPrice, orderId, productId } = req.body;
+    const { quantity, orderId, productId } = req.body;
+
+    let productName = null;
+    let unitPrice = null;
+
+    if (productId) {
+      const product = await prisma.product.findUnique({
+        where: { id: productId },
+      });
+
+      if (!product) {
+        return res.status(404).json({ error: "Produto não encontrado" });
+      }
+
+      productName = product.name;
+      unitPrice = product.price;
+    }
 
     const orderItem = await prisma.orderItem.create({
       data: {
         quantity,
         unitPrice,
-        orderId,
         productId,
+        productName,
+        orderId,
+      },
+      include: {
+        order: true,
+        product: true,
       },
     });
 
@@ -62,41 +82,57 @@ export const createOrderItem = async (req, res) => {
 export const updateOrderItem = async (req, res) => {
   try {
     const { id } = req.params;
-    const { quantity, unitPrice, orderId, productId } = req.body;
+    const { quantity, orderId, productId } = req.body;
+
+    const dataToUpdate = {};
+    if (quantity !== undefined) dataToUpdate.quantity = quantity;
+    if (orderId) dataToUpdate.orderId = orderId;
+
+    if (productId) {
+      const product = await prisma.product.findUnique({
+        where: { id: productId },
+      });
+
+      if (!product) {
+        return res.status(404).json({ error: "Produto não encontrado" });
+      }
+
+      dataToUpdate.productId = productId;
+      dataToUpdate.productName = product.name;
+      dataToUpdate.unitPrice = product.price;
+    }
 
     const updatedOrderItem = await prisma.orderItem.update({
       where: { id: parseInt(id) },
-      data: {
-        ...(quantity !== undefined && { quantity }),
-        ...(unitPrice !== undefined && { unitPrice }),
-        ...(orderId && { orderId }),
-        ...(productId && { productId }),
+      data: dataToUpdate,
+      include: {
+        order: true,
+        product: true,
       },
     });
 
     res.json(updatedOrderItem);
   } catch (error) {
     if (error.code === "P2025") {
-      return res.status(404).json({ error: "Item de pedido não encontrado." });
+      return res.status(404).json({ error: "Item de pedido não encontrado" });
     }
     res.status(500).json({ error: error.message });
   }
 };
 
-// Soft delete de um item de pedido
+// Excluir um item de pedido (exclusão física)
 export const deleteOrderItem = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const deletedOrderItem = await prisma.orderItem.update({
+    await prisma.orderItem.delete({
       where: { id: parseInt(id) },
-      data: { deletedAt: new Date() }, // marca como deletado
     });
 
-    res.json({ message: "Item de pedido deletado com sucesso (soft delete)", deletedOrderItem });
+    res.json({ message: "Item de pedido excluído com sucesso" });
   } catch (error) {
     if (error.code === "P2025") {
-      return res.status(404).json({ error: "Item de pedido não encontrado." });
+      return res.status(404).json({ error: "Item de pedido não encontrado" });
     }
     res.status(500).json({ error: error.message });
   }
